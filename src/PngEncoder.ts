@@ -92,7 +92,9 @@ export default class PngEncoder extends IOBuffer {
     for (let i = 0; i < height; i++) {
       newData.writeByte(0); // no filter
       /* istanbul ignore else */
-      if (depth === 8) {
+      if (depth === 1) {
+        offset = writeDataBits(data, newData, slotsPerLine, offset);
+      } else if (depth === 8) {
         offset = writeDataBytes(data, newData, slotsPerLine, offset);
       } else if (depth === 16) {
         offset = writeDataUint16(data, newData, slotsPerLine, offset);
@@ -155,7 +157,7 @@ function getColorType(data: ImageData): {
   if (channels !== 4 && channels !== 3 && channels !== 2 && channels !== 1) {
     throw new RangeError(`unsupported number of channels: ${channels}`);
   }
-  if (depth !== 8 && depth !== 16) {
+  if (depth !== 1 && depth !== 8 && depth !== 16) {
     throw new RangeError(`unsupported bit depth: ${depth}`);
   }
 
@@ -177,6 +179,38 @@ function getColorType(data: ImageData): {
       throw new Error('unsupported number of channels');
   }
   return returnValue;
+}
+
+function writeDataBits(
+  data: PngDataArray,
+  newData: IOBuffer,
+  slotsPerLine: number,
+  bitOffset: number,
+): number {
+  newData.mark();
+
+  for (let j = 0; j < slotsPerLine; j++) {
+    let byteOffset = bitOffset >> 3;
+    let bitOffsetInByte = bitOffset & 7;
+    let currentByte = newData.readByte();
+    newData.reset();
+
+    let newValue = data[byteOffset];
+    if (newValue === 0) {
+      currentByte &= ~(1 << bitOffsetInByte);
+    } else {
+      currentByte |= 1 << bitOffsetInByte;
+    }
+    newData.writeByte(currentByte);
+
+    bitOffset += 1;
+    if (bitOffset >> 3 === byteOffset) {
+      newData.reset();
+    }
+  }
+  newData.readByte(); // skip to the next byte to finalize the current byte
+
+  return bitOffset;
 }
 
 function writeDataBytes(

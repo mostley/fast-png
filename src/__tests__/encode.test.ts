@@ -94,6 +94,28 @@ describe('encode', () => {
     expect(decoded.data).toStrictEqual(dataArray);
   });
 
+  it('A 1-bit', () => {
+    const dataArray = new Uint8Array([0, 0, 255, 255, 0, 255]);
+    const data = encode({
+      width: 2,
+      height: 3,
+      data: dataArray,
+      channels: 1,
+      depth: 1,
+    });
+    expect(data).toBeInstanceOf(Uint8Array);
+    const decoded = decode(data);
+    const expected = {
+      width: 2,
+      height: 3,
+      depth: 1,
+    };
+    check(decoded, expected);
+    checkPngJs(data, expected);
+    expect(decoded.data).toBeInstanceOf(Uint8Array);
+    expect(decoded.data).toStrictEqual(dataArray);
+  });
+
   it('errors', () => {
     expect(() =>
       encode({
@@ -132,15 +154,6 @@ describe('encode', () => {
         channels: 3,
       }),
     ).toThrow('wrong data size. Found 10, expected 3');
-    expect(() =>
-      encode({
-        width: 1,
-        height: 1,
-        depth: 1,
-        data: new Uint8Array(10),
-        channels: 3,
-      }),
-    ).toThrow('unsupported bit depth: 1');
   });
 });
 
