@@ -204,6 +204,7 @@ function writeDataBits(
     newData.writeByte(currentByte);
 
     bitOffset += 1;
+    // writeByte moves the pointer, do not reset if our bit offset stayed in the last byte
     if (bitOffset >> 3 === byteOffset) {
       newData.reset();
     }
